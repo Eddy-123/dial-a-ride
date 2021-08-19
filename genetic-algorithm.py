@@ -12,17 +12,19 @@ class Instance:
     def read(cls, instance_path = 'instances/pr01.txt'):
         cls.vertices = []
         with open(instance_path, 'r') as f:
-            file_content = f.readlines()[2:]
+            file_content = f.readlines()[:]
             
             datas = file_content[2:]
             
             #general information
             instance_description = file_content[0]
             instance_description = instance_description.split()
-            cls.number_of_vehicles = instance_description[0]
-            cls.number_of_services = instance_description[1]
-            cls.vehicle_capacity = instance_description[2]
-            cls.maximum_ride_time = instance_description[3]
+            cls.number_of_vehicles = int(instance_description[0])
+            cls.number_of_services = int(instance_description[1])
+            cls.maximum_route_duration = float(instance_description[2])
+            cls.vehicle_capacity = int(instance_description[3])
+            cls.maximum_ride_time = float(instance_description[4])
+            
             
             #depot
             depot = file_content[1]
@@ -31,21 +33,24 @@ class Instance:
             
         for data in datas:
             data = data.split()
-            vertice = Vertice(number = depot[0], x_coordinate = depot[1], y_coordinate = depot[2], service_time_duration = depot[3], service_nature = depot[4], service_early_time = depot[5], service_later_time = depot[6])
+            vertice = Vertice(number = data[0], x_coordinate = data[1], y_coordinate = data[2], service_time_duration = data[3], service_nature = data[4], service_early_time = data[5], service_later_time = data[6])
             cls.vertices.append(vertice)
 
 class Vertice:
     def __init__(self, number, x_coordinate, y_coordinate, service_time_duration, service_nature, service_early_time, service_later_time):
-        self.number = number
-        self.x_coordinate = x_coordinate
-        self.y_coordinate = y_coordinate
-        self.service_time_duration = service_time_duration
-        self.service_nature = service_nature
-        self.service_early_time = service_early_time
-        self.service_later_time = service_later_time
-        self.vehicle_arrival_time = None
-        self.departure_time = None
-        self.begin_service_time = None
+        self.number = int(number)
+        self.x_coordinate = float(x_coordinate)
+        self.y_coordinate = float(y_coordinate)
+        self.service_time_duration = float(service_time_duration)
+        self.service_nature = int(service_nature)
+        self.service_early_time = float(service_early_time)
+        self.service_later_time = float(service_later_time)
+        #to do : values set to -1 must be reset
+        self.vehicle_arrival_time = -1
+        self.departure_time = -1
+        self.begin_service_time = -1
+        
+        self.violation_load = -1
     
     def distance(self, vertice):
         x_distance = abs(self.x_coordinate - vertice.x_coordinate)
@@ -61,6 +66,10 @@ class Fitness:
         self.route = route
         self.distance = 0
         self.fitness = 0.0
+        violation_load = 0
+        for i in range(len(route)):
+            violation_load += route[i].violation_load
+        self.violation_load = violation_load
     
     def route_distance(self):
         if self.distance == 0:
@@ -78,9 +87,24 @@ class Fitness:
     def route_travel_time(self):
         return self.route_distance()
     
+    def route_ride_time(self):
+        return self.route_distance()
+    
+    def route_duration(self):
+        services_time_duration = 0
+        for i in range(len(self.route)):
+            services_time_duration += self.route[i].service_time_duration
+        route_duration = services_time_duration + self.route_travel_time()
+        return route_duration
+    
     def route_fitness(self):
-        if self.fitness == 0:
-            return None#to do
+        c_routing_cost = self.route_cost()
+        q_violation_load = self.violation_load
+        d_violation_duration = max(0, Instance.maximum_route_duration - self.route_duration())
+        w_violation_time_window = self.route_violation_time_window()
+        t_violation_ride_time = max(0, Instance.maximum_ride_time - self.route_ride_time())
+        fitness = c_routing_cost + q_violation_load + d_violation_duration + w_violation_time_window + t_violation_ride_time
+        return fitness
     
     def route_violation_time_window(self): #one route
         for i in range(len(self.route)):
@@ -130,7 +154,12 @@ class Individual:
 
 #TEST
 Instance.read()
-print(Instance.maximum_ride_time)
+route = Instance.vertices
+#print("route = ", route[0].number)
+print(Fitness(route).route_duration())
+#(Instance.maximum_route_duration
+
+
 
 #To do
 #Verticle.* = None
