@@ -1,4 +1,4 @@
-import numpy as np, random, operator, pandas as pd, matplotlib.pyplot as plt
+import numpy as np, random, operator, pandas as pd, matplotlib.pyplot as plt, collections
 
 class Instance:
     number_of_vehicles = None
@@ -61,6 +61,9 @@ class Vertice:
     def __repr__(self):
         return "(" + str(self.x_coordinate) + ", " + str(self.y_coordinate) + ")"
 
+#Global call
+Instance.read()
+
 class Fitness:
     def __init__(self, route):
         self.route = route
@@ -103,7 +106,7 @@ class Fitness:
         d_violation_duration = max(0, Instance.maximum_route_duration - self.route_duration())
         w_violation_time_window = self.route_violation_time_window()
         t_violation_ride_time = max(0, Instance.maximum_ride_time - self.route_ride_time())
-        fitness = c_routing_cost + q_violation_load + d_violation_duration + w_violation_time_window + t_violation_ride_time
+        fitness = c_routing_cost #to do: add other violation values
         return fitness
     
     def route_violation_time_window(self): #one route
@@ -130,7 +133,7 @@ class Gene:
         return "client " + str(self.client_number) + " --> vehicle " + str(self.vehicle_number)
 
 class Individual:
-    def __init__(self, number_of_clients, number_of_vehicles):
+    def __init__(self, number_of_clients = int(Instance.number_of_services / 2) , number_of_vehicles = Instance.number_of_vehicles):
         individual = []
         for i in range(number_of_clients):
             client = i + 1
@@ -140,23 +143,36 @@ class Individual:
         self.genes = individual
     
     def __repr__(self):
-        client_string = ""
-        vehicle_string = ""
         if len(self.genes) > 0:
             result = ""
-            for i in range(len(self.genes)):
-                result += "| C" + str(self.genes[i].client_number) + " --> V" + str(self.genes[i].vehicle_number) + " |"
+            formatted_individual = Utils.format_individual(self)
+            for key in formatted_individual:
+                line = "Vehicle " + str(key) + " : " + str(formatted_individual[key]) + "\n"
+                result += line
         else:
             result = "Empty individual"
         return result
 
-
+class Utils:
+    @classmethod
+    def format_individual(cls, individual):
+        solution = {}
+        for i in range(len(individual.genes)):
+            client = individual.genes[i].client_number
+            vehicle = individual.genes[i].vehicle_number
+            if vehicle in solution:
+                solution[vehicle].append(client)
+            else:
+                solution[vehicle] = [client]
+        return collections.OrderedDict(sorted(solution.items()))
 
 #TEST
-Instance.read()
-route = Instance.vertices
+
+
+individual = Individual()
 #print("route = ", route[0].number)
-print(Fitness(route).route_duration())
+f_individual = Utils.format_individual(individual)
+print(individual)
 #(Instance.maximum_route_duration
 
 
