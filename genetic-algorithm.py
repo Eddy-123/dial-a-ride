@@ -35,6 +35,13 @@ class Instance:
             data = data.split()
             vertice = Vertice(number = data[0], x_coordinate = data[1], y_coordinate = data[2], service_time_duration = data[3], service_nature = data[4], service_early_time = data[5], service_later_time = data[6])
             cls.vertices.append(vertice)
+    
+    @classmethod
+    def get_vertice(cls, vertice_number):
+        for vertice in Instance.vertices:
+            if vertice.number == vertice_number:
+                return vertice
+        
 
 class Vertice:
     def __init__(self, number, x_coordinate, y_coordinate, service_time_duration, service_nature, service_early_time, service_later_time):
@@ -135,12 +142,29 @@ class Gene:
 class Individual:
     def __init__(self, number_of_clients = int(Instance.number_of_services / 2) , number_of_vehicles = Instance.number_of_vehicles):
         individual = []
+        #genes
         for i in range(number_of_clients):
             client = i + 1
             vehicle = random.randint(1, number_of_vehicles)
             gene = Gene(client, vehicle)
-            individual.append(gene)
+            individual.append(gene)            
         self.genes = individual
+    
+        #sequences
+        vertices = Instance.vertices
+        sequences = Utils.format_individual(self)
+        for i in range(len(sequences)):
+            #i+1 = vehicle number = sequence key
+            sequence_key = i + 1
+            clients = sequences[sequence_key] 
+            vertices = []
+            for j in clients:
+                origin = j
+                destination = int(j+Instance.number_of_services / 2)
+                vertices.append(Instance.get_vertice(origin))
+                vertices.append(Instance.get_vertice(destination))
+            sequences[sequence_key] = vertices
+        self.sequences = sequences
     
     def __repr__(self):
         if len(self.genes) > 0:
@@ -171,11 +195,11 @@ class Utils:
 
 individual = Individual()
 #print("route = ", route[0].number)
-f_individual = Utils.format_individual(individual)
-print(individual)
+#f_individual = Utils.format_individual(individual)
+#print(individual)
 #(Instance.maximum_route_duration
 
-
-
+#print(Fitness().route_duration())
+print(individual.sequences[1][0].number)
 #To do
 #Verticle.* = None
