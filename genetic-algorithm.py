@@ -38,6 +38,8 @@ class Instance:
     
     @classmethod
     def get_vertice(cls, vertice_number):
+        if vertice_number == 0:
+            return Instance.depot
         for vertice in Instance.vertices:
             if vertice.number == vertice_number:
                 return vertice
@@ -73,22 +75,18 @@ Instance.read()
 
 class Fitness:
     def __init__(self, route):
-        self.route = route
-        self.distance = 0
-        self.fitness = 0.0
+        self.route = route                
+        self.distance = 0 #self.route_distance()
+        self.fitness = 0 #self.route_fitness()
         violation_load = 0
-        for i in range(len(route)):
-            violation_load += route[i].violation_load
-        self.violation_load = violation_load
     
     def route_distance(self):
-        if self.distance == 0:
-            path_distance = 0
-            for i in range(0, (len(self.route) - 1)):#complete route
-                from_vertice = self.route[i]
-                to_vertice = self.route[i+1]
-                path_distance += from_vertice.distance(to_vertice)
-            self.distance = path_distance
+        path_distance = 0
+        for i in range(0, (len(self.route) - 1)):#complete route
+            from_vertice = self.route[i]
+            to_vertice = self.route[i+1]
+            path_distance += from_vertice.distance(to_vertice)
+        self.distance = path_distance
         return self.distance
     
     def route_cost(self): #routing cost = sum(c_i_j)
@@ -100,11 +98,21 @@ class Fitness:
     def route_ride_time(self):
         return self.route_distance()
     
-    def route_duration(self):
+    def route_duration(self, starting_time = 0):
         services_time_duration = 0
-        for i in range(len(self.route)):
-            services_time_duration += self.route[i].service_time_duration
-        route_duration = services_time_duration + self.route_travel_time()
+        path_distance = 0
+        ending_time = starting_time
+        for i in range(len(self.route) - 1):
+            services_time_duration = self.route[i].service_time_duration
+            from_vertice = self.route[i]
+            to_vertice = self.route[i+1]
+            path_distance = from_vertice.distance(to_vertice)
+            waiting_time = to_vertice.service_early_time - (ending_time + services_time_duration + path_distance)
+            transit_time = (ending_time + services_time_duration + path_distance) - to_vertice.service_later_time
+            if waiting_time < 0:
+                waiting_time = 0
+            ending_time += services_time_duration + path_distance + waiting_time
+        route_duration = ending_time - starting_time
         return route_duration
     
     def route_fitness(self):
@@ -130,6 +138,7 @@ class Fitness:
         x = request_ride_time - Instance.maximum_ride_time
         request_violation_ride_time = max(0, x)
         return request_violation_ride_time
+
 
 class Gene:
     def __init__(self, client_number, vehicle_number):
@@ -166,6 +175,10 @@ class Individual:
             sequences[sequence_key] = vertices
         self.sequences = sequences
     
+    def set_sequences(self, sequences):
+        for i in range(len(sequences)):
+            self.sequences[i+1] = sequences[i]
+    
     def __repr__(self):
         if len(self.genes) > 0:
             result = ""
@@ -200,6 +213,33 @@ individual = Individual()
 #(Instance.maximum_route_duration
 
 #print(Fitness().route_duration())
-print(individual.sequences[1][0].number)
+#print(individual.sequences[1][0].number)
 #To do
 #Verticle.* = None
+sequence1 = [0, 10, 11, 35, 34, 0]
+sequence2 = [0, 14, 22, 3, 27, 46, 38, 12, 24, 48, 6, 36, 15, 18, 30, 21, 39, 42, 45 , 0]
+sequence3 = [0, 9, 17, 33, 8, 20, 1, 41, 7, 31, 44, 32, 2, 25, 5, 13, 29, 26, 16, 4, 28, 37, 19, 23, 40, 47, 43, 0]
+route1 = []
+route2 = []
+route3 = []
+for i in sequence1:
+    route1.append(Instance.get_vertice(i))
+
+for i in sequence2:
+    route2.append(Instance.get_vertice(i))
+
+for i in sequence3:
+    route3.append(Instance.get_vertice(i))
+
+individual.set_sequences([route1, route2, route3])
+
+
+starting_time = [188.54, 148.08, 83.13]
+total_duration = 0
+for i in range(len(individual.sequences)):
+    fitness = Fitness(individual.sequences[i+1])
+    route_duration  = fitness.route_duration(starting_time = starting_time[i])
+    print("route "+ str(i+1) + " duration cost = " + str(route_duration))
+    total_duration += route_duration
+
+print("total duration time = " + str(total_duration))
