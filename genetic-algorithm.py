@@ -7,6 +7,8 @@ class Instance:
     maximum_ride_time = None
     depot = None
     vertices = []
+    starting_time = {'pr01': [188.54, 148.08, 83.13]}
+    name = 'pr01'
     
     @classmethod
     def read(cls, instance_path = 'instances/pr01.txt'):
@@ -106,6 +108,7 @@ class Fitness:
             services_time_duration = self.route[i].service_time_duration
             from_vertice = self.route[i]
             to_vertice = self.route[i+1]
+            
             path_distance = from_vertice.distance(to_vertice)
             waiting_time = to_vertice.service_early_time - (ending_time + services_time_duration + path_distance)
             transit_time = (ending_time + services_time_duration + path_distance) - to_vertice.service_later_time
@@ -121,7 +124,7 @@ class Fitness:
         d_violation_duration = max(0, Instance.maximum_route_duration - self.route_duration())
         w_violation_time_window = self.route_violation_time_window()
         t_violation_ride_time = max(0, Instance.maximum_ride_time - self.route_ride_time())
-        fitness = c_routing_cost #to do: add other violation values
+        fitness = self.route_distance()
         return fitness
     
     def route_violation_time_window(self): #one route
@@ -138,7 +141,25 @@ class Fitness:
         x = request_ride_time - Instance.maximum_ride_time
         request_violation_ride_time = max(0, x)
         return request_violation_ride_time
+    
+    @classmethod
+    def individual_evaluation(cls, individual, instance_name = Instance.name):
+        starting_time = Instance.starting_time[instance_name] # [188.54, 148.08, 83.13]
+        total_duration = 0
+        total_route_cost = 0
 
+
+        for i in range(len(individual.sequences)):
+            fitness = Fitness(individual.sequences[i+1])
+            route_duration  = fitness.route_duration(starting_time = starting_time[i])
+            route_cost = fitness.route_cost()
+            #print("route "+ str(i+1) + " duration cost = " + str(route_duration))
+            total_duration += route_duration
+            total_route_cost += route_cost
+
+        #print("total duration time = " + str(total_duration) + "total distance = " + str(total_route_cost))
+        return [total_duration, total_route_cost]
+        
 
 class Gene:
     def __init__(self, client_number, vehicle_number):
@@ -172,8 +193,52 @@ class Individual:
                 destination = int(j+Instance.number_of_services / 2)
                 vertices.append(Instance.get_vertice(origin))
                 vertices.append(Instance.get_vertice(destination))
-            sequences[sequence_key] = vertices
+            print("1: " + str(Fitness(vertices).route_distance()))
+            sequence = self.best_sequence(vertices)
+            print("2: "+ str(Fitness(sequence).route_distance()))
+            sequences[sequence_key] = sequence
         self.sequences = sequences
+    
+    def best_sequence(self, vertices):
+        #find the best feasible sequence based on tabu search
+        sequence = vertices #initial solution
+        sequence_length = len(sequence)
+        tabu_time = 3
+        i = sequence_length**2
+        tabu_list = [[0]*sequence_length]*sequence_length
+        best_sequence = sequence
+        best_value = Fitness(sequence).route_distance()
+        #iterative algorithm
+        while i > 0:
+            #print(sequence)
+            #neighbouring by permutation
+            for j in range(sequence_length):
+                for k in range(sequence_length):
+                    if tabu_list[j][k] <= 0:
+                        temp = sequence[j]
+                        sequence[j] = sequence[k]
+                        sequence[k] = temp
+                        if Individual.isValid(sequence):
+                            #check if sequence is the best, then update best and tabu_list
+                            sequence_value = Fitness(sequence).route_distance()
+                            if (tabu_list[j][k] <= 0) and (sequence_value < best_value):
+                                best_sequence = sequence
+                                best_value = sequence_value
+                                #update tabu list
+                                for a in range(len(tabu_list)):
+                                    for b in range(len(tabu_list[a])):
+                                        if tabu_list[a][b] -1 >=0:
+                                            tabu_list[a][b] -= 1
+                                tabu_list[j][k] = tabu_time
+            
+            #update tabu list
+            sequence = best_sequence
+            i -= 1
+            return best_sequence
+    
+    @classmethod
+    def isValid(cls, sequence):
+        return True
     
     def set_sequences(self, sequences):
         for i in range(len(sequences)):
@@ -203,43 +268,8 @@ class Utils:
                 solution[vehicle] = [client]
         return collections.OrderedDict(sorted(solution.items()))
 
-#TEST
 
+# step 1: initial population
 
 individual = Individual()
-#print("route = ", route[0].number)
-#f_individual = Utils.format_individual(individual)
-#print(individual)
-#(Instance.maximum_route_duration
-
-#print(Fitness().route_duration())
-#print(individual.sequences[1][0].number)
-#To do
-#Verticle.* = None
-sequence1 = [0, 10, 11, 35, 34, 0]
-sequence2 = [0, 14, 22, 3, 27, 46, 38, 12, 24, 48, 6, 36, 15, 18, 30, 21, 39, 42, 45 , 0]
-sequence3 = [0, 9, 17, 33, 8, 20, 1, 41, 7, 31, 44, 32, 2, 25, 5, 13, 29, 26, 16, 4, 28, 37, 19, 23, 40, 47, 43, 0]
-route1 = []
-route2 = []
-route3 = []
-for i in sequence1:
-    route1.append(Instance.get_vertice(i))
-
-for i in sequence2:
-    route2.append(Instance.get_vertice(i))
-
-for i in sequence3:
-    route3.append(Instance.get_vertice(i))
-
-individual.set_sequences([route1, route2, route3])
-
-
-starting_time = [188.54, 148.08, 83.13]
-total_duration = 0
-for i in range(len(individual.sequences)):
-    fitness = Fitness(individual.sequences[i+1])
-    route_duration  = fitness.route_duration(starting_time = starting_time[i])
-    print("route "+ str(i+1) + " duration cost = " + str(route_duration))
-    total_duration += route_duration
-
-print("total duration time = " + str(total_duration))
+#print(individual.sequences)
