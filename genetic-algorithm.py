@@ -159,7 +159,14 @@ class Fitness:
 
         #print("total duration time = " + str(total_duration) + "total distance = " + str(total_route_cost))
         return [total_duration, total_route_cost]
+    
+    @classmethod
+    def sequence_evaluation(cls, sequence, sequence_key, instance_name = Instance.name):
+        starting_time = Instance.starting_time[instance_name][sequence_key]
+        total_duration = 0
+        total_route_cost = 0
         
+        fitness
 
 class Gene:
     def __init__(self, client_number, vehicle_number):
@@ -193,13 +200,14 @@ class Individual:
                 destination = int(j+Instance.number_of_services / 2)
                 vertices.append(Instance.get_vertice(origin))
                 vertices.append(Instance.get_vertice(destination))
-            print("1: " + str(Fitness(vertices).route_distance()))
-            sequence = self.best_sequence(vertices)
-            print("2: "+ str(Fitness(sequence).route_distance()))
+            #print("1: " + str(Fitness(vertices).route_distance()))
+            sequence = self.best_sequence(vertices, sequence_key)
+            #print(sequence)
             sequences[sequence_key] = sequence
         self.sequences = sequences
+        
     
-    def best_sequence(self, vertices):
+    def best_sequence(self, vertices, sequence_key):
         #find the best feasible sequence based on tabu search
         sequence = vertices #initial solution
         sequence_length = len(sequence)
@@ -212,13 +220,13 @@ class Individual:
         while i > 0:
             #print(sequence)
             #neighbouring by permutation
-            for j in range(sequence_length):
-                for k in range(sequence_length):
+            for j in range(1, sequence_length - 1):
+                for k in range(1, sequence_length - 1):
                     if tabu_list[j][k] <= 0:
                         temp = sequence[j]
                         sequence[j] = sequence[k]
                         sequence[k] = temp
-                        if Individual.isValid(sequence):
+                        if Individual.isValid(sequence, sequence_key):
                             #check if sequence is the best, then update best and tabu_list
                             sequence_value = Fitness(sequence).route_distance()
                             if (tabu_list[j][k] <= 0) and (sequence_value < best_value):
@@ -237,7 +245,27 @@ class Individual:
             return best_sequence
     
     @classmethod
-    def isValid(cls, sequence):
+    def isValid(cls, sequence, sequence_key):
+        for i in range(len(sequence)):
+            if sequence[i].service_nature == 1:
+                origin = sequence[i]
+                destination_number = origin.number + int(Instance.number_of_services / 2)
+                destination = Instance.get_vertice(destination_number)
+            elif sequence[i].service_nature == -1:
+                destination = sequence[i]
+                origin_number = destination.number - int(Instance.number_of_services / 2)
+                origin = Instance.get_vertice(origin_number)
+            #pickup before delivery
+            if sequence.index(destination) < sequence.index(origin):
+                return False
+            
+            #service 1 + trajet + service 2
+            if (i < len(sequence)-1):
+                #first_service_duration = sequence[i].sevice_time_duration
+                #route_distance = Fitness([sequence[i], sequence[i+1]]).route_distance()
+                second_service_starting_time = Fitness(sequence[:i+2]).route_duration(starting_time = Instance.starting_time[Instance.name][sequence_key - 1])
+                if second_service_starting_time > sequence[i+1].service_later_time:
+                    return False
         return True
     
     def set_sequences(self, sequences):
@@ -270,6 +298,11 @@ class Utils:
 
 
 # step 1: initial population
-
 individual = Individual()
-#print(individual.sequences)
+best = Fitness.individual_evaluation(individual)
+for i in range(100000):
+    individual = Individual()
+    fitness = Fitness.individual_evaluation(individual)
+    if best[0] > fitness[0]:
+        best = fitness
+    print(best)
