@@ -178,14 +178,20 @@ class Gene:
 
 class Individual:
     def __init__(self, number_of_clients = int(Instance.number_of_services / 2) , number_of_vehicles = Instance.number_of_vehicles):
-        individual = []
         #genes
-        for i in range(number_of_clients):
-            client = i + 1
-            vehicle = random.randint(1, number_of_vehicles)
-            gene = Gene(client, vehicle)
-            individual.append(gene)            
-        self.genes = individual
+        loop = True
+        while loop:
+            genes = []
+            for i in range(number_of_clients):
+                client = i + 1
+                vehicle = random.randint(1, number_of_vehicles)
+                gene = Gene(client, vehicle)
+                genes.append(gene)            
+            loop = False
+            for i in range(1, number_of_vehicles + 1):
+                if i not in Individual.vehicles_from_genes(genes):
+                    loop = True
+        self.genes = genes
     
         #sequences
         vertices = Instance.vertices
@@ -205,7 +211,14 @@ class Individual:
             #print(sequence)
             sequences[sequence_key] = sequence
         self.sequences = sequences
-        
+    
+    @classmethod
+    def vehicles_from_genes(cls, genes):
+        vehicles = []
+        for i in range(len(genes)):
+            gene = genes[i]
+            vehicles.append(gene.vehicle_number)
+        return vehicles
     
     def best_sequence(self, vertices, sequence_key):
         #find the best feasible sequence based on tabu search
@@ -298,11 +311,20 @@ class Utils:
 
 
 # step 1: initial population
+
+# step 2: loop-populations
+
+# step 3: mutation
+
+# step 4: crossover
+
+
 individual = Individual()
 best = Fitness.individual_evaluation(individual)
-for i in range(100000):
-    individual = Individual()
-    fitness = Fitness.individual_evaluation(individual)
-    if best[0] > fitness[0]:
-        best = fitness
-    print(best)
+#for i in range(100000):
+#    individual = Individual()
+#    fitness = Fitness.individual_evaluation(individual)
+#    if best[0] > fitness[0]:
+#        best = fitness
+print(individual)
+print("evaluation = " + str(best))
