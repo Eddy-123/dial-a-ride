@@ -1,4 +1,5 @@
 import numpy as np, random, operator, pandas as pd, matplotlib.pyplot as plt, collections
+from datetime import datetime
 
 class Instance:
     number_of_vehicles = None
@@ -192,7 +193,7 @@ class Individual:
                 if i not in Individual.vehicles_from_genes(genes):
                     loop = True
         self.genes = genes
-    
+        
         #sequences
         vertices = Instance.vertices
         sequences = Utils.format_individual(self)
@@ -209,7 +210,7 @@ class Individual:
             #print("1: " + str(Fitness(vertices).route_distance()))
             sequence = self.best_sequence(vertices, sequence_key)
             #print(sequence)
-            sequences[sequence_key] = sequence
+            sequences[sequence_key] =  [Instance.depot] + sequence + [Instance.depot]
         self.sequences = sequences
     
     @classmethod
@@ -220,6 +221,15 @@ class Individual:
             vehicles.append(gene.vehicle_number)
         return vehicles
     
+    
+    def show_sequences(self):
+        output = {}
+        for i in range(len(self.sequences)):
+            output[i + 1] = []
+            for vertice in self.sequences[i+1]:
+                output[i + 1].append(vertice.number)
+        return output
+        
     def best_sequence(self, vertices, sequence_key):
         #find the best feasible sequence based on tabu search
         sequence = vertices #initial solution
@@ -259,6 +269,7 @@ class Individual:
     
     @classmethod
     def isValid(cls, sequence, sequence_key):
+        capacity = 0
         for i in range(len(sequence)):
             if sequence[i].service_nature == 1:
                 origin = sequence[i]
@@ -279,11 +290,68 @@ class Individual:
                 second_service_starting_time = Fitness(sequence[:i+2]).route_duration(starting_time = Instance.starting_time[Instance.name][sequence_key - 1])
                 if second_service_starting_time > sequence[i+1].service_later_time:
                     return False
+            
+            #maximum ride time
+            origin_key = sequence.index(origin)
+            destination_key = sequence.index(destination)
+            origin_starting_time = Fitness(sequence[:origin_key]).route_duration(starting_time = Instance.starting_time[Instance.name][sequence_key - 1])
+            destination_starting_time = Fitness(sequence[:destination_key]).route_duration(starting_time = Instance.starting_time[Instance.name][sequence_key - 1])
+            if (destination_starting_time - origin_starting_time) > Instance.maximum_ride_time:
+                return False
+            
+            #capacity
+            capacity += sequence[i].service_nature
+            if capacity > Instance.vehicle_capacity:
+                return False
+            
         return True
     
     def set_sequences(self, sequences):
         for i in range(len(sequences)):
             self.sequences[i+1] = sequences[i]
+    
+    @classmethod
+    def crossover(cls, parent_1, parent_2):
+        #genes
+        individual = Individual()
+        genes = parent_1.genes[:int(len(parent_2.genes)/2)] + parent_2.genes[int(len(parent_1.genes)/2):]
+        loop = True
+        while loop:
+            loop = False
+            for i in range(1, Instance.number_of_vehicles + 1):
+                if i not in Individual.vehicles_from_genes(genes):
+                    gene_indice = random.randint(0, len(genes) - 1)
+                    genes[gene_indice].vehicle_number = i
+                    loop = True
+        #mutation
+        i = random.randint(0, len(genes) - 1)
+        j = random.randint(0, len(genes) - 1)
+        temp = genes[i].vehicle_number
+        genes[i].vehicle_number = genes[j].vehicle_number
+        genes[j].vehicle_number = temp
+        individual.genes = genes
+    
+        #sequences
+        vertices = Instance.vertices
+        sequences = Utils.format_individual(individual)
+        for i in range(len(sequences)):
+            #i+1 = vehicle number = sequence key
+            sequence_key = i + 1
+            clients = sequences[sequence_key] 
+            vertices = []
+            for j in clients:
+                origin = j
+                destination = int(j+Instance.number_of_services / 2)
+                vertices.append(Instance.get_vertice(origin))
+                vertices.append(Instance.get_vertice(destination))
+            #print("1: " + str(Fitness(vertices).route_distance()))
+            sequence = individual.best_sequence(vertices, sequence_key)
+            #print(sequence)
+            sequences[sequence_key] =  [Instance.depot] + sequence + [Instance.depot]
+        individual.sequences = sequences
+    
+        
+        return individual
     
     def __repr__(self):
         if len(self.genes) > 0:
@@ -308,23 +376,61 @@ class Utils:
             else:
                 solution[vehicle] = [client]
         return collections.OrderedDict(sorted(solution.items()))
+    
+    @classmethod
+    def current_time(cls):
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+        print("Temps actuel = ", curent_time)
+
+main_program = 1
+while(main_program <= 20):
+
+    print("<-- start execution {} -->".format(main_program))
+    Utils.current_time()
+    # step 1: initial population
+    population_size = 100
+    population = []
+    maximum_generation = 100
+
+    for i in range(population_size):
+        individual = Individual()
+        population.append(individual)
+
+    # step 2: loop-generations
+    parent_1 = population[0]
+    parent_2 = population[1]
+
+    print(parent_1.show_sequences(), Fitness.individual_evaluation(parent_1))
+    print(parent_2.show_sequences(), Fitness.individual_evaluation(parent_2))
 
 
-# step 1: initial population
+    for cpt in range(maximum_generation):
+        #population evaluation and parents detection
+        for i in range(population_size):
+            individual = population[i]
+            fitness = Fitness.individual_evaluation(individual)
+            if fitness[0] < Fitness.individual_evaluation(parent_1)[0]:
+                parent_2 = parent_1
+                parent_1 = individual
+        
+        # step 3: new population: crossover and mutation
+        population = [parent_1, parent_2]
+        for j in range((population_size - 2)):
+            population.append(Individual.crossover(parent_1, parent_2))
 
-# step 2: loop-populations
+    #end loop-generations
 
-# step 3: mutation
+    for i in range(population_size):
+        individual = population[i]
+        fitness = Fitness.individual_evaluation(individual)
+        if fitness[0] < Fitness.individual_evaluation(parent_1)[0]:
+            parent_2 = parent_1
+            parent_1 = individual
 
-# step 4: crossover
 
-
-individual = Individual()
-best = Fitness.individual_evaluation(individual)
-#for i in range(100000):
-#    individual = Individual()
-#    fitness = Fitness.individual_evaluation(individual)
-#    if best[0] > fitness[0]:
-#        best = fitness
-print(individual)
-print("evaluation = " + str(best))
+    print(parent_1.show_sequences(), Fitness.individual_evaluation(parent_1))
+    print(parent_2.show_sequences(), Fitness.individual_evaluation(parent_2))
+    Utils.current_time()
+    print("<-- end execution {} -->".format(main_program))
+    main_program += 1
