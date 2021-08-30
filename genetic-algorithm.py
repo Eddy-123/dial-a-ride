@@ -249,18 +249,22 @@ class Individual:
                         temp = sequence[j]
                         sequence[j] = sequence[k]
                         sequence[k] = temp
-                        if Individual.isValid(sequence, sequence_key):
-                            #check if sequence is the best, then update best and tabu_list
-                            sequence_value = Fitness(sequence).route_distance()
-                            if (tabu_list[j][k] <= 0) and (sequence_value < best_value):
-                                best_sequence = sequence
-                                best_value = sequence_value
-                                #update tabu list
-                                for a in range(len(tabu_list)):
-                                    for b in range(len(tabu_list[a])):
-                                        if tabu_list[a][b] -1 >=0:
-                                            tabu_list[a][b] -= 1
-                                tabu_list[j][k] = tabu_time
+                        if not Individual.isValid(sequence, sequence_key):
+                            temp = sequence[j]
+                            sequence[j] = sequence[k]
+                            sequence[k] = temp
+                        
+                        #check if sequence is the best, then update best and tabu_list
+                        sequence_value = Fitness(sequence).route_distance()
+                        if (tabu_list[j][k] <= 0) and (sequence_value < best_value):
+                            best_sequence = sequence
+                            best_value = sequence_value
+                            #update tabu list
+                            for a in range(len(tabu_list)):
+                                for b in range(len(tabu_list[a])):
+                                    if tabu_list[a][b] -1 >=0:
+                                        tabu_list[a][b] -= 1
+                            tabu_list[j][k] = tabu_time
             
             #update tabu list
             sequence = best_sequence
@@ -279,8 +283,10 @@ class Individual:
                 destination = sequence[i]
                 origin_number = destination.number - int(Instance.number_of_services / 2)
                 origin = Instance.get_vertice(origin_number)
+            #print("origin = {} destination = {}".format(origin.number, destination.number))
             #pickup before delivery
             if sequence.index(destination) < sequence.index(origin):
+                #print("pickup after delivery")
                 return False
             
             #service 1 + trajet + service 2
@@ -381,22 +387,22 @@ class Utils:
     def current_time(cls):
         now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
-        print("Temps actuel = ", curent_time)
+        print("Temps actuel = ", current_time)
 
 main_program = 1
 while(main_program <= 20):
-
+    
     print("<-- start execution {} -->".format(main_program))
     Utils.current_time()
     # step 1: initial population
-    population_size = 100
+    population_size = 50
     population = []
-    maximum_generation = 100
+    maximum_generation = 50
 
     for i in range(population_size):
         individual = Individual()
         population.append(individual)
-
+    
     # step 2: loop-generations
     parent_1 = population[0]
     parent_2 = population[1]
@@ -406,6 +412,7 @@ while(main_program <= 20):
 
 
     for cpt in range(maximum_generation):
+        #print(cpt)
         #population evaluation and parents detection
         for i in range(population_size):
             individual = population[i]
