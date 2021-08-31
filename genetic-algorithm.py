@@ -8,11 +8,14 @@ class Instance:
     maximum_ride_time = None
     depot = None
     vertices = []
-    starting_time = {'pr01': [188.54, 148.08, 83.13]}
-    name = 'pr01'
+    starting_time = {
+        'pr01': [188.54, 148.08, 83.13],
+        'pr02': [98.25, 85.24, 130.29, 54.96, 79.93]
+        }
+    name = 'pr02'
     
     @classmethod
-    def read(cls, instance_path = 'instances/pr01.txt'):
+    def read(cls, instance_path = 'instances/pr02.txt'):
         cls.vertices = []
         with open(instance_path, 'r') as f:
             file_content = f.readlines()[:]
