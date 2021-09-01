@@ -14,10 +14,10 @@ class Instance:
         'pr03': [43.59, 125.08, 99.04, 125.01, 70.93, 80.93, 137.01],
         'pr05': [136.50, 90.32, 97.37, 112.42, 88.77, 69.00, 161.34, 301.39, 33.37, 143.39, 104.44]
         }
-    name = 'pr03'
+    name = 'pr05'
     
     @classmethod
-    def read(cls, instance_path = 'instances/pr03.txt'):
+    def read(cls, instance_path = 'instances/pr05.txt'):
         cls.vertices = []
         with open(instance_path, 'r') as f:
             file_content = f.readlines()[:]

@@ -1,0 +1,10 @@
+<-- start execution 1 -->
+Temps actuel =  08:19:09
+<-- start execution 1 -->
+Temps actuel =  08:25:59
+<-- start execution 1 -->
+Temps actuel =  10:08:07
+<-- start execution 1 -->
+Temps actuel =  12:33:37
+<-- start execution 1 -->
+Temps actuel =  18:16:27
